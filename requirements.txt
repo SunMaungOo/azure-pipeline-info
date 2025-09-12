@@ -1,0 +1,4 @@
+azure-identity==1.24.0
+azure-mgmt-datafactory==9.2.0
+azure-synapse-artifacts==0.21.0
+python-decouple==3.8
