@@ -6,6 +6,25 @@ from dataclasses import asdict
 from pathlib import Path
 from func import get_dataset_func
 import json
+import logging
+
+logger = logging.getLogger("azure-pipeline-info")
+
+logger.setLevel(logging.DEBUG)
+
+# Prevent propagation to root logger (avoids duplicate logs if used in packages)
+logger.propagate = False
+
+formatter = logging.Formatter(
+    fmt='%(asctime)s | %(levelname)-8s | %(name)-15s | %(lineno)-3d | %(message)s',
+    datefmt='%Y-%m-%dT%H:%M:%S.%fZ'  # ISO 8601 with microseconds → Z for UTC
+)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 DatasetMap = Dict[str,Tuple[Optional[APIDatasetResource],Optional[APILinkedServiceResource]]]
 
@@ -76,15 +95,40 @@ def main():
 
     api_client = get_api_client()
 
+    logger.info("Extracting datasets:",end="")
+
     datasets = api_client.get_datasets()
+
+    if dataset is None:
+        logger.info("fail")
+    else:
+        logger.info("success")
+
+    logger.info("Extracting linked service:",end="")
 
     linked_services = api_client.get_linked_service()
 
+    if linked_services is None:
+        logger.info("fail")
+    else:
+        logger.info("success")
+
     dataset_map = get_dataset_mapping(datasets=datasets,linked_services=linked_services)
 
-    pipelines:List[PipelineInfo] = list()
+    pipeline_infos:List[PipelineInfo] = list()
 
-    for x in api_client.get_pipelines():
+    logger.info("Extracting pipeline:",end="")
+
+    pipelines = api_client.get_pipelines()
+
+    if pipelines is None:
+        logger.info("fail")
+    else:
+        logger.info("success")
+
+    logger.info("Getting pipeline info:",end="")
+
+    for x in pipelines:
 
         pipeline_name = x.name
 
@@ -104,17 +148,27 @@ def main():
 
 
         if len(activities)>0:
-            pipelines.append(PipelineInfo(
+            pipeline_infos.append(PipelineInfo(
                 name=pipeline_name,\
                 activities=activities
             ))
 
-    output_file_path = Path(OUTPUT_FILE_PATH)
-    output_file_path.parent.mkdir(parents=True,exist_ok=True)
 
-    with output_file_path.open(mode="w") as file:
-        json.dump([asdict(pipeline) for pipeline in pipelines],file,indent=4)
+    logger.info(f"{len(pipeline_infos)} info found")
 
+    logger.info(f"Saving pipeline info to {OUTPUT_FILE_PATH}:",end="")
+
+    try:
+        output_file_path = Path(OUTPUT_FILE_PATH)
+        output_file_path.parent.mkdir(parents=True,exist_ok=True)
+
+        with output_file_path.open(mode="w") as file:
+            json.dump([asdict(pipeline_info) for pipeline_info in pipeline_infos],file,indent=4)
+
+        logger.info("success")
+
+    except:
+        logger.info("fail")
 
 if __name__ == "__main__":
     main()
