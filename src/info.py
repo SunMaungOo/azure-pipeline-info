@@ -99,7 +99,7 @@ def main():
 
     datasets = api_client.get_datasets()
 
-    if dataset is None:
+    if datasets is None:
         logger.info("Extracting datasets:fail")
     else:
         logger.info("Extracting datasets:success")
@@ -163,10 +163,10 @@ def main():
         with output_file_path.open(mode="w") as file:
             json.dump([asdict(pipeline_info) for pipeline_info in pipeline_infos],file,indent=4)
 
-        logger.info("Saving pipeline info to {OUTPUT_FILE_PATH}:success")
+        logger.info(f"Saving pipeline info to {OUTPUT_FILE_PATH}:success")
 
     except:
-        logger.info("Saving pipeline info to {OUTPUT_FILE_PATH}:fail")
+        logger.info(f"Saving pipeline info to {OUTPUT_FILE_PATH}:fail")
 
 if __name__ == "__main__":
     main()
