@@ -9,6 +9,7 @@ import json
 
 DatasetMap = Dict[str,Tuple[Optional[APIDatasetResource],Optional[APILinkedServiceResource]]]
 
+ 
 def get_dataset_mapping(datasets:List[APIDatasetResource],\
                         linked_services:List[APILinkedServiceResource])->DatasetMap:
     """
@@ -17,7 +18,7 @@ def get_dataset_mapping(datasets:List[APIDatasetResource],\
     value = (None,None) for only linked service name
     """
     
-    dataset_map:Dict[str,Tuple[Optional[APIDatasetResource],Optional[APILinkedServiceResource]]] = dict()
+    dataset_map:DatasetMap = dict()
 
     for dataset in datasets:
         for ls in linked_services:
@@ -93,18 +94,15 @@ def main():
 
             activity_name = actv.name
 
-            func = get_dataset_func(actv=actv)
+            datasets = get_dataset_info(actv=actv,dataset_map=dataset_map)
 
-            if func is not None:
+            if len(datasets)>0:
+                activities.append(ActivityInfo(
+                    name=activity_name,
+                    datasets=datasets
+                ))
 
-                datasets = get_dataset_info(actv=actv,dataset_map=dataset_map)
 
-                if len(datasets)>0:
-                    activities.append(ActivityInfo(
-                        name=activity_name,
-                        datasets=datasets
-                    ))
-        
         if len(activities)>0:
             pipelines.append(PipelineInfo(
                 name=pipeline_name,\
