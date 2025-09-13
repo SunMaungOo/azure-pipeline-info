@@ -95,38 +95,38 @@ def main():
 
     api_client = get_api_client()
 
-    logger.info("Extracting datasets:",end="")
+    logger.info("Extracting datasets:")
 
     datasets = api_client.get_datasets()
 
     if dataset is None:
-        logger.info("fail")
+        logger.info("Extracting datasets:fail")
     else:
-        logger.info("success")
+        logger.info("Extracting datasets:success")
 
-    logger.info("Extracting linked service:",end="")
+    logger.info("Extracting linked service:")
 
     linked_services = api_client.get_linked_service()
 
     if linked_services is None:
-        logger.info("fail")
+        logger.info("Extracting linked service:fail")
     else:
-        logger.info("success")
+        logger.info("Extracting linked service:success")
 
     dataset_map = get_dataset_mapping(datasets=datasets,linked_services=linked_services)
 
     pipeline_infos:List[PipelineInfo] = list()
 
-    logger.info("Extracting pipeline:",end="")
+    logger.info("Extracting pipeline:")
 
     pipelines = api_client.get_pipelines()
 
     if pipelines is None:
-        logger.info("fail")
+        logger.info("Extracting pipeline:fail")
     else:
-        logger.info("success")
+        logger.info("Extracting pipeline:success")
 
-    logger.info("Getting pipeline info:",end="")
+    logger.info("Getting pipeline info")
 
     for x in pipelines:
 
@@ -154,9 +154,7 @@ def main():
             ))
 
 
-    logger.info(f"{len(pipeline_infos)} info found")
-
-    logger.info(f"Saving pipeline info to {OUTPUT_FILE_PATH}:",end="")
+    logger.info(f"Getting pipeline info:{len(pipeline_infos)} info found")
 
     try:
         output_file_path = Path(OUTPUT_FILE_PATH)
@@ -165,10 +163,10 @@ def main():
         with output_file_path.open(mode="w") as file:
             json.dump([asdict(pipeline_info) for pipeline_info in pipeline_infos],file,indent=4)
 
-        logger.info("success")
+        logger.info("Saving pipeline info to {OUTPUT_FILE_PATH}:success")
 
     except:
-        logger.info("fail")
+        logger.info("Saving pipeline info to {OUTPUT_FILE_PATH}:fail")
 
 if __name__ == "__main__":
     main()
