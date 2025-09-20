@@ -4,6 +4,8 @@ from azure.mgmt.datafactory import DataFactoryManagementClient
 from typing import List,Optional
 from model import APIDatasetResource,APIPipelineResource,APILinkedServiceResource
 from azure.synapse.artifacts import ArtifactsClient
+from azure.core.exceptions import DeserializationError
+import requests
 
 class AzureClient:
     """
@@ -37,7 +39,7 @@ class AzureClient:
     def get_datasets(self)->Optional[List[APIDatasetResource]]:
         return self.client.get_datasets() 
     
-    def get_linked_service(self)->List[APILinkedServiceResource]:
+    def get_linked_service(self)->Optional[List[APILinkedServiceResource]]:
         return self.client.get_linked_service()
     
     def get_pipelines(self)->Optional[List[APIPipelineResource]]:
@@ -63,6 +65,13 @@ class DataFactoryClient:
 
         self.data_factory_name = data_factory_name
 
+        access_token = credential.get_token("https://management.azure.com/.default").token
+
+        self.fallback_client = FallbackDataFactoryClient(access_token=access_token,\
+                                                         subscription_id=subscription_id,\
+                                                         resource_group_name=resource_group_name,\
+                                                         data_factory_name=data_factory_name)
+
     def get_datasets(self)->Optional[List[APIDatasetResource]]:
         
         try:
@@ -79,7 +88,7 @@ class DataFactoryClient:
         except Exception:
             return None
         
-    def get_linked_service(self)->List[APILinkedServiceResource]:
+    def get_linked_service(self)->Optional[List[APILinkedServiceResource]]:
 
         try:
             return [
@@ -91,7 +100,9 @@ class DataFactoryClient:
                 for linked_service_resource in self.client.linked_services.list_by_factory(resource_group_name=self.resource_group_name,\
                                                                                            factory_name=self.data_factory_name)
             ]
-        except Exception:
+        except DeserializationError:
+            return self.fallback_client.get_linked_service()
+        except Exception as e:
             return None
   
     def get_pipelines(self)->Optional[List[APIPipelineResource]]:
@@ -162,7 +173,7 @@ class SynapseClient:
         except Exception as e:
             return None
         
-    def get_linked_service(self)->List[APILinkedServiceResource]:
+    def get_linked_service(self)->Optional[List[APILinkedServiceResource]]:
 
         try:
             return [
@@ -202,4 +213,49 @@ class SynapseClient:
             return None
 
 
+class FallbackDataFactoryClient:
+    def __init__(self,\
+                 access_token:str,
+                 subscription_id:str,
+                 resource_group_name:str,\
+                 data_factory_name:str):
+        
+        self.access_token = access_token
+
+        self.subscription_id = subscription_id
+
+        self.resource_group_name = resource_group_name
+
+        self.data_factory_name = data_factory_name
+
+    def get_linked_service(self)->Optional[List[APILinkedServiceResource]]:
+       
+       
+       url = (
+            f"https://management.azure.com/subscriptions/{self.subscription_id}"
+            f"/resourceGroups/{self.resource_group_name}"
+            f"/providers/Microsoft.DataFactory/factories/{self.data_factory_name}"
+            f"/linkedservices?api-version=2018-06-01"
+        )
+       
+       headers = {"Authorization": f"Bearer {self.access_token}"}
+  
+       try:
+           
+           response = requests.get(url=url, headers=headers)
+
+           return [
+               APILinkedServiceResource(linked_service_name=linked_service_resource["name"],\
+                                            azure_data_type=linked_service_resource["properties"]["type"],\
+                                            properties=linked_service_resource["properties"])
+           for linked_service_resource in response.json().get("value")]
+       
+       except Exception:
+           return None
+    
+
+       
+
+
+    
    
